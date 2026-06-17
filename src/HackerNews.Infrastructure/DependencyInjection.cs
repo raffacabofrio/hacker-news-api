@@ -45,10 +45,15 @@ public static class DependencyInjection
             .AddStandardResilienceHandler();
 
         // --- Redis ---
+        // abortConnect=false: the multiplexer retries in the background rather than
+        // throwing during startup. This makes the service survive a momentary Redis
+        // unavailability at boot (e.g. Redis container not yet ready in docker-compose).
         services.AddSingleton<IConnectionMultiplexer>(sp =>
         {
             var opts = sp.GetRequiredService<IOptions<CacheOptions>>().Value;
-            return ConnectionMultiplexer.Connect(opts.RedisConnectionString);
+            var config = ConfigurationOptions.Parse(opts.RedisConnectionString);
+            config.AbortOnConnectFail = false;
+            return ConnectionMultiplexer.Connect(config);
         });
 
         // --- Cache (two-tier) ---
